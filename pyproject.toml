@@ -1,0 +1,42 @@
+[project]
+name = "askdoc"
+version = "0.1.0"
+description = "Mini RAG service built with FastAPI."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "pydantic-settings",
+    "uvicorn[standard]",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # import sorting
+    "B",   # bugbear
+    "UP",  # pyupgrade
+    "SIM", # simplify
+    "C4",  # comprehensions
+]
+fixable = ["ALL"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["askdoc"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+

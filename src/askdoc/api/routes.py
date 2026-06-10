@@ -3,13 +3,24 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 
 from askdoc.contracts.documents import IngestDocumentRequest, IngestDocumentResponse
+from askdoc.settings import Settings, get_settings
+from askdoc.storage.document_storage import DocumentStorage
+from askdoc.storage.local_document_storage import LocalDocumentStorage
 from askdoc.use_cases.ingest_document import IngestDocumentUseCase
 
 router = APIRouter()
 
 
-def get_ingest_document_use_case() -> IngestDocumentUseCase:
-    return IngestDocumentUseCase()
+def get_document_storage(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> DocumentStorage:
+    return LocalDocumentStorage(settings.documents_storage_path)
+
+
+def get_ingest_document_use_case(
+    storage: Annotated[DocumentStorage, Depends(get_document_storage)],
+) -> IngestDocumentUseCase:
+    return IngestDocumentUseCase(storage)
 
 
 @router.post(

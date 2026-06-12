@@ -3,7 +3,7 @@ name = "askdoc"
 version = "0.1.0"
 description = "Mini RAG service built with FastAPI."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "fastapi",
     "pydantic-settings",
@@ -17,7 +17,7 @@ dev = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py311"
 src = ["src"]
 
 [tool.ruff.lint]

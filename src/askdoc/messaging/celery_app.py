@@ -10,7 +10,7 @@ DOCUMENT_INGESTION_TASK = "askdoc.process_document"
 def create_celery_app() -> Celery:
     settings = get_settings()
 
-    celery_app = Celery(settings.app_name.lower(), broker=settings.rabbitmq_url)
+    celery_app = Celery(settings.app_name.lower(), broker=settings.rabbitmq_url, include=["askdoc.messaging.tasks"])
     celery_app.conf.task_routes = {
         DOCUMENT_INGESTION_TASK: {
             "queue": DOCUMENT_INGESTION_QUEUE,

@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     app_name: str = "AskDoc"
     environment: str = "local"
     documents_storage_path: Path = Path(".data/documents")
+    rabbitmq_url: str = "amqp://guest:guest@localhost:5672//"
 
     model_config = SettingsConfigDict(
         env_file=".env",

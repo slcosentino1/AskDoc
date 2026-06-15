@@ -8,6 +8,7 @@ dependencies = [
     "fastapi",
     "pydantic-settings",
     "uvicorn[standard]",
+    "celery"
 ]
 
 [project.optional-dependencies]

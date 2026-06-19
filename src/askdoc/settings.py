@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     environment: str = "local"
     documents_storage_path: Path = Path(".data/documents")
     rabbitmq_url: str = "amqp://guest:guest@localhost:5672//"
+    document_chunk_size: int = 500
+    document_chunk_overlap: int = 100
 
     model_config = SettingsConfigDict(
         env_file=".env",

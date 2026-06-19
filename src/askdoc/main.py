@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 
 from askdoc.api.routes import router
+from askdoc.logging_config import configure_logging
 from askdoc.settings import get_settings
+
+configure_logging()
 
 
 def create_app() -> FastAPI:

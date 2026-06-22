@@ -27,12 +27,20 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-echo "Starting RabbitMQ..."
+echo "Starting Docker services (RabbitMQ + Postgres)..."
 docker compose up -d
 
 echo "Waiting for RabbitMQ..."
 for _ in $(seq 1 30); do
   if docker compose exec -T rabbitmq rabbitmq-diagnostics -q ping >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
+echo "Waiting for Postgres..."
+for _ in $(seq 1 30); do
+  if docker compose exec -T postgres pg_isready -U askdoc -d askdoc >/dev/null 2>&1; then
     break
   fi
   sleep 1
@@ -45,5 +53,5 @@ echo "Starting Celery worker..."
 WORKER_PID=$!
 
 echo "Starting API on http://127.0.0.1:8000"
-echo "Press Ctrl+C to stop API and worker (RabbitMQ keeps running in Docker)."
+echo "Press Ctrl+C to stop API and worker (Docker services keep running until make stop)."
 "$PYTHON" -m uvicorn askdoc.main:app --reload

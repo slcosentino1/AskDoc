@@ -13,3 +13,24 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: askdoc-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_DEFAULT_USER:-askdoc}
+      POSTGRES_PASSWORD: ${POSTGRES_DEFAULT_PASS:-askdoc}
+      POSTGRES_DB: ${POSTGRES_DEFAULT_DB:-askdoc}
+    volumes:
+      - askdoc_pg_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U askdoc -d askdoc"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  askdoc_pg_data:

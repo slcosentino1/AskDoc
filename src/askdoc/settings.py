@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     rabbitmq_url: str = "amqp://guest:guest@localhost:5672//"
     document_chunk_size: int = 500
     document_chunk_overlap: int = 100
+    embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+    database_url: str = "postgresql+psycopg://askdoc:askdoc@localhost:5432/askdoc"
 
     model_config = SettingsConfigDict(
         env_file=".env",

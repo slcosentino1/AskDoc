@@ -8,7 +8,11 @@ dependencies = [
     "fastapi",
     "pydantic-settings",
     "uvicorn[standard]",
-    "celery"
+    "celery",
+    "sentence-transformers",
+    "sqlalchemy",
+    "psycopg[binary]",
+    "pgvector"
 ]
 
 [project.optional-dependencies]

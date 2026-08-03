@@ -35,3 +35,6 @@ def create_celery_app() -> Celery:
 
 celery_app = create_celery_app()
 configure_logging(log_format=CELERY_LOG_FORMAT)
+
+# Register worker_process_init so the embedding model loads once per child process.
+import askdoc.messaging.worker_init  # noqa: E402, F401

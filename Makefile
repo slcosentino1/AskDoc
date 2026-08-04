@@ -41,7 +41,7 @@ docker-down:
 	docker compose stop
 
 worker:
-	$(CELERY) -A $(CELERY_APP) worker --loglevel=info -Q $(CELERY_QUEUES) --concurrency=$(CELERY_CONCURRENCY)
+	$(CELERY) -A $(CELERY_APP) worker --loglevel=info -Q $(CELERY_QUEUES) --concurrency=$(CELERY_CONCURRENCY) --pool=solo
 
 start:
 	@chmod +x scripts/dev.sh

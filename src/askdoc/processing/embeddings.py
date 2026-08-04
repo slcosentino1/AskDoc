@@ -9,12 +9,13 @@ def load_embedding_model() -> None:
     """Load the embedding model once (call from Celery worker_process_init)."""
     global _model
     if _model is None:
-        _model = SentenceTransformer(get_settings().embedding_model_name)
+        # Force CPU: Celery prefork + PyTorch MPS aborts on macOS (SIGABRT).
+        _model = SentenceTransformer(get_settings().embedding_model_name, device="cpu")
 
 
 def get_embedding_model() -> SentenceTransformer:
     if _model is None:
-        raise RuntimeError("Embedding model not loaded. Call load_embedding_model() first.")
+        load_embedding_model()
     return _model
 
 

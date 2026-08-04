@@ -49,7 +49,8 @@ done
 echo "Starting Celery worker..."
 "$CELERY" -A askdoc.messaging.celery_app worker \
   --loglevel=info \
-  -Q document-ingestion,document-chunks &
+  -Q document-ingestion,document-chunks \
+  --concurrency=1 &
 WORKER_PID=$!
 
 echo "Starting API on http://127.0.0.1:8000"

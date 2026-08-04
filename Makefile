@@ -8,6 +8,7 @@ CELERY ?= $(PYTHON) -m celery
 
 CELERY_APP := askdoc.messaging.celery_app
 CELERY_QUEUES := document-ingestion,document-chunks
+CELERY_CONCURRENCY := 1
 
 install-dev:
 	$(PYTHON) -m pip install -e ".[dev]"
@@ -40,7 +41,7 @@ docker-down:
 	docker compose stop
 
 worker:
-	$(CELERY) -A $(CELERY_APP) worker --loglevel=info -Q $(CELERY_QUEUES)
+	$(CELERY) -A $(CELERY_APP) worker --loglevel=info -Q $(CELERY_QUEUES) --concurrency=$(CELERY_CONCURRENCY)
 
 start:
 	@chmod +x scripts/dev.sh

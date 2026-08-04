@@ -1,15 +1,26 @@
 import logging
-from uuid import uuid4
+from uuid import UUID, uuid4
 
+from askdoc.db.session import get_session
 from askdoc.messaging.celery_app import DOCUMENT_CHUNKS_TASK, DOCUMENT_INGESTION_TASK, celery_app
 from askdoc.models.document_chunk import DocumentChunk
 from askdoc.processing.chunking import chunk_document
+from askdoc.processing.embeddings import embed_texts
 from askdoc.settings import get_settings
+from askdoc.storage.pgvector_store import PgVectorStore
 
 logger = logging.getLogger(__name__)
 
+_TASK_RETRY_OPTIONS = {
+    "autoretry_for": (Exception,),
+    "retry_kwargs": {"max_retries": 3},
+    "retry_backoff": True,
+    "retry_backoff_max": 60,
+    "retry_jitter": True,
+}
 
-@celery_app.task(name=DOCUMENT_INGESTION_TASK)
+
+@celery_app.task(name=DOCUMENT_INGESTION_TASK, **_TASK_RETRY_OPTIONS)
 def process_document(job_id: str, file_name: str, file_path: str) -> None:
     """Process the document ingestion job."""
     settings = get_settings()
@@ -68,9 +79,9 @@ def process_document(job_id: str, file_name: str, file_path: str) -> None:
     )
 
 
-@celery_app.task(name=DOCUMENT_CHUNKS_TASK)
+@celery_app.task(name=DOCUMENT_CHUNKS_TASK, **_TASK_RETRY_OPTIONS)
 def process_chunk(chunk_id: str, job_id: str, file_name: str, chunk_index: int, text: str) -> None:
-    """Process the document chunk job."""
+    """Embed a document chunk and persist the vector in Postgres."""
     logger.info(
         "Processing chunk",
         extra={
@@ -79,5 +90,43 @@ def process_chunk(chunk_id: str, job_id: str, file_name: str, chunk_index: int, 
             "chunk_index": chunk_index,
             "file_name": file_name,
             "text_length": len(text),
+        },
+    )
+
+    embedding = embed_texts([text])[0]
+
+    session = get_session()
+    try:
+        store = PgVectorStore(session)
+        store.upsert(
+            chunk_id=UUID(chunk_id),
+            job_id=UUID(job_id),
+            file_name=file_name,
+            chunk_index=chunk_index,
+            text=text,
+            embedding=embedding,
+        )
+    except Exception:
+        logger.exception(
+            "Error embedding/storing chunk",
+            extra={
+                "chunk_id": chunk_id,
+                "job_id": job_id,
+                "chunk_index": chunk_index,
+                "file_name": file_name,
+            },
+        )
+        raise
+    finally:
+        session.close()
+
+    logger.info(
+        "Chunk embedded and stored",
+        extra={
+            "chunk_id": chunk_id,
+            "job_id": job_id,
+            "chunk_index": chunk_index,
+            "file_name": file_name,
+            "embedding_dims": len(embedding),
         },
     )

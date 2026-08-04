@@ -1,8 +1,10 @@
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from askdoc.contracts.query import QueryMatch
 from askdoc.db.models import DocumentChunkEmbedding
 
 
@@ -39,3 +41,28 @@ class PgVectorStore:
         )
         self._session.execute(stmt)
         self._session.commit()
+
+    def search(self, *, query_embedding: list[float], top_k: int) -> list[QueryMatch]:
+        distance = DocumentChunkEmbedding.embedding.cosine_distance(query_embedding)
+        stmt = (
+            select(DocumentChunkEmbedding, distance.label("distance"))
+            .order_by(distance)
+            .limit(top_k)
+        )
+        rows = self._session.execute(stmt).all()
+
+        matches: list[QueryMatch] = []
+        for row in rows:
+            chunk = row[0]
+            dist = float(row[1])
+            matches.append(
+                QueryMatch(
+                    chunk_id=chunk.chunk_id,
+                    job_id=chunk.job_id,
+                    file_name=chunk.file_name,
+                    chunk_index=chunk.chunk_index,
+                    text=chunk.text,
+                    score=1.0 - dist,
+                )
+            )
+        return matches

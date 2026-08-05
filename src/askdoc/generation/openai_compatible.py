@@ -1,10 +1,19 @@
-from openai import OpenAI
-
-
 class OpenAiCompatibleLlmClient:
     """Works with OpenAI, Ollama, LM Studio, and other OpenAI-compatible APIs."""
 
-    def __init__(self, *, api_key: str, model: str, base_url: str | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        model: str,
+        base_url: str | None = None,
+        trace_enabled: bool = False,
+    ) -> None:
+        if trace_enabled:
+            from langfuse.openai import OpenAI
+        else:
+            from openai import OpenAI
+
         client_kwargs: dict = {"api_key": api_key or "not-needed"}
         if base_url:
             client_kwargs["base_url"] = base_url

@@ -6,7 +6,7 @@ _model: SentenceTransformer | None = None
 
 
 def load_embedding_model() -> None:
-    """Load the embedding model once (call from Celery worker_process_init)."""
+    """Load the embedding model once (API lifespan / Celery worker_process_init)."""
     global _model
     if _model is None:
         # Force CPU: Celery prefork + PyTorch MPS aborts on macOS (SIGABRT).

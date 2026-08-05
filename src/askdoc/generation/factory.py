@@ -1,11 +1,14 @@
 from askdoc.generation.llm import LlmClient
 from askdoc.generation.openai_compatible import OpenAiCompatibleLlmClient
+from askdoc.observability.langfuse import configure_langfuse_from_settings
 from askdoc.settings import Settings
 
 _OPENAI_COMPATIBLE_PROVIDERS = frozenset({"ollama", "openai", "openai_compatible"})
 
 
 def create_llm_client(settings: Settings) -> LlmClient:
+    configure_langfuse_from_settings(settings)
+
     provider = settings.llm_provider.strip().lower()
     if provider not in _OPENAI_COMPATIBLE_PROVIDERS:
         raise ValueError(
@@ -21,4 +24,5 @@ def create_llm_client(settings: Settings) -> LlmClient:
         api_key=settings.llm_api_key,
         model=settings.llm_model,
         base_url=base_url,
+        trace_enabled=settings.langfuse_enabled,
     )

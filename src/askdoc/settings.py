@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     llm_model: str = "llama3.2"
     llm_base_url: str = "http://localhost:11434/v1"
     llm_api_key: str = "ollama"
+    langfuse_enabled: bool = False
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_base_url: str = "https://cloud.langfuse.com"
 
     model_config = SettingsConfigDict(
         env_file=".env",

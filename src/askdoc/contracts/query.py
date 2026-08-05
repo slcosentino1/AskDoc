@@ -19,4 +19,5 @@ class QueryMatch(BaseModel):
 
 class QueryDocumentsResponse(BaseModel):
     query: str
+    answer: str
     matches: list[QueryMatch]

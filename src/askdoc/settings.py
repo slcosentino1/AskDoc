@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     document_chunk_overlap: int = 100
     embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     database_url: str = "postgresql+psycopg://askdoc:askdoc@localhost:5432/askdoc"
+    llm_provider: str = "ollama"
+    llm_model: str = "llama3.2"
+    llm_base_url: str = "http://localhost:11434/v1"
+    llm_api_key: str = "ollama"
 
     model_config = SettingsConfigDict(
         env_file=".env",

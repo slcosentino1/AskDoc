@@ -12,7 +12,8 @@ dependencies = [
     "sentence-transformers",
     "sqlalchemy",
     "psycopg[binary]",
-    "pgvector"
+    "pgvector",
+    "openai",
 ]
 
 [project.optional-dependencies]

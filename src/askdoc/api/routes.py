@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from askdoc.contracts.documents import IngestDocumentRequest, IngestDocumentResponse
 from askdoc.contracts.query import QueryDocumentsRequest, QueryDocumentsResponse
 from askdoc.db.session import get_session
+from askdoc.generation.factory import create_llm_client
+from askdoc.generation.llm import LlmClient
 from askdoc.messaging.celery_document_ingestion_dispatcher import CeleryDocumentIngestionDispatcher
 from askdoc.messaging.document_ingestion_dispatcher import DocumentIngestionDispatcher
 from askdoc.settings import Settings, get_settings
@@ -51,10 +53,17 @@ def get_vector_store(
     return PgVectorStore(session)
 
 
+def get_llm_client(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> LlmClient:
+    return create_llm_client(settings)
+
+
 def get_query_documents_use_case(
     store: Annotated[VectorStore, Depends(get_vector_store)],
+    llm: Annotated[LlmClient, Depends(get_llm_client)],
 ) -> QueryDocumentsUseCase:
-    return QueryDocumentsUseCase(store)
+    return QueryDocumentsUseCase(store, llm)
 
 
 @router.post(

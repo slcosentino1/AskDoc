@@ -20,12 +20,22 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "ruff",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-mock",
+    "httpx",
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["src"]
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["src"]
+src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = [

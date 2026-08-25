@@ -1,4 +1,4 @@
-.PHONY: install-dev check compile lint fix format format-check dev docker-up docker-down worker start stop
+.PHONY: install-dev check compile lint fix format format-check test dev docker-up docker-down worker start stop
 
 VENV_PYTHON := $(wildcard .venv/bin/python)
 PYTHON ?= $(if $(VENV_PYTHON),$(VENV_PYTHON),python3)
@@ -13,23 +13,26 @@ CELERY_CONCURRENCY := 1
 install-dev:
 	$(PYTHON) -m pip install -e ".[dev]"
 
-check: compile lint format-check
+check: compile lint format-check test
 
 compile:
 	$(PYTHON) -m compileall src
 
 lint:
-	$(RUFF) check src
+	$(RUFF) check src tests
 
 fix:
-	$(RUFF) check src --fix
-	$(RUFF) format src
+	$(RUFF) check src tests --fix
+	$(RUFF) format src tests
 
 format:
-	$(RUFF) format src
+	$(RUFF) format src tests
 
 format-check:
-	$(RUFF) format --check src
+	$(RUFF) format --check src tests
+
+test:
+	$(PYTHON) -m pytest
 
 dev:
 	$(UVICORN) askdoc.main:app --reload

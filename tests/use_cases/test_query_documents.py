@@ -1,33 +1,31 @@
 from pytest_mock import MockerFixture
 
-from askdoc.contracts.query import QueryDocumentsRequest, QueryMatch
+from askdoc.contracts.query import QueryDocumentsRequest, QueryMatch, SearchMatchesRequest
 from askdoc.use_cases.query_documents import QueryDocumentsUseCase
+from askdoc.use_cases.search_matches import SearchMatchesUseCase
 
 
-async def test_query_embeds_searches_and_generates(
+async def test_query_retrieves_then_generates(
     mocker: MockerFixture, sample_match: QueryMatch
 ) -> None:
-    fake_embedding = [0.1, 0.2, 0.3]
-    mocker.patch(
-        "askdoc.use_cases.query_documents.embed_texts",
-        return_value=[fake_embedding],
-    )
-
-    store = mocker.Mock()
-    store.search.return_value = [sample_match]
+    search = mocker.AsyncMock(spec=SearchMatchesUseCase)
+    search.execute.return_value = mocker.Mock(matches=[sample_match])
     llm = mocker.Mock()
     llm.complete.return_value = "Embeddings live in Postgres."
-    use_case = QueryDocumentsUseCase(store, llm)
+    use_case = QueryDocumentsUseCase(search, llm)
 
-    response = await use_case.execute(
-        QueryDocumentsRequest(query="Where are embeddings?", top_k=3)
-    )
+    response = await use_case.execute(QueryDocumentsRequest(query="Where are embeddings?", top_k=3))
 
     assert response.query == "Where are embeddings?"
     assert response.answer == "Embeddings live in Postgres."
     assert response.matches == [sample_match]
 
-    store.search.assert_called_once_with(query_embedding=fake_embedding, top_k=3)
+    search.execute.assert_awaited_once()
+    search_req = search.execute.await_args.args[0]
+    assert isinstance(search_req, SearchMatchesRequest)
+    assert search_req.query == "Where are embeddings?"
+    assert search_req.top_k == 3
+
     llm.complete.assert_called_once()
     system = llm.complete.call_args.kwargs["system"]
     user = llm.complete.call_args.kwargs["user"]
@@ -37,16 +35,11 @@ async def test_query_embeds_searches_and_generates(
 
 
 async def test_query_still_calls_llm_when_no_matches(mocker: MockerFixture) -> None:
-    mocker.patch(
-        "askdoc.use_cases.query_documents.embed_texts",
-        return_value=[[0.0, 0.0, 0.0]],
-    )
-
-    store = mocker.Mock()
-    store.search.return_value = []
+    search = mocker.AsyncMock(spec=SearchMatchesUseCase)
+    search.execute.return_value = mocker.Mock(matches=[])
     llm = mocker.Mock()
     llm.complete.return_value = "I don't have enough information."
-    use_case = QueryDocumentsUseCase(store, llm)
+    use_case = QueryDocumentsUseCase(search, llm)
 
     response = await use_case.execute(QueryDocumentsRequest(query="Unknown topic?", top_k=5))
 

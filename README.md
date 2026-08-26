@@ -10,7 +10,8 @@ It is designed as a learning / portfolio project with a clear split between a Fa
 - **Two-stage pipeline** — chunking and embedding run on separate RabbitMQ queues so they can scale independently
 - **Structure-aware chunking** — prefers paragraphs and sentences (with soft breaks on punctuation) over fixed character windows
 - **Vector search** — cosine similarity over pgvector (HNSW)
-- **RAG answers** — retrieve top-k chunks, then complete with an OpenAI-compatible LLM (Ollama by default)
+- **RAG answers** — `POST /query` retrieves top-k chunks, then completes with an OpenAI-compatible LLM (Ollama by default)
+- **Retrieval for agents** — `POST /search-matches` returns similarity matches only (no LLM), for tools that generate their own answer
 - **Optional observability** — Langfuse tracing when enabled
 
 ## Architecture
@@ -23,10 +24,15 @@ POST /documents
        → enqueue process_chunk per chunk  (queue: document-chunks)
             → embed + upsert into Postgres/pgvector
 
-POST /query
+POST /search-matches   (retrieval only — for agent tools)
   → embed question
   → similarity search
+  → { query, matches }
+
+POST /query            (full RAG — for humans / demos)
+  → same retrieval as /search-matches
   → LLM completion with retrieved context
+  → { query, answer, matches }
 ```
 
 **Why two queues?** Chunking is mostly sequential file I/O; embedding is CPU-bound and parallelizable. Separate queues isolate failures (a failed embed retries one chunk, not the whole document) and allow different worker counts per stage.
@@ -109,9 +115,11 @@ Example response (`202`):
 {"job_id":"...","status":"queued"}
 ```
 
-Give the worker a moment to chunk and embed before querying.
+Give the worker a moment to chunk and embed before querying or searching.
 
-### Query
+### Query (RAG answer + matches)
+
+Use when you want AskDoc to generate the final answer:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/askdoc/query \
@@ -119,7 +127,19 @@ curl -X POST http://127.0.0.1:8000/api/askdoc/query \
   -d '{"query":"Where are embeddings stored?","top_k":5}'
 ```
 
-Response includes `answer` plus the retrieved `matches` (chunk text + score).
+Response: `{ "query", "answer", "matches" }`.
+
+### Search matches (retrieval only)
+
+Use when another service/agent (e.g. OpsDesk) will generate the answer:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/askdoc/search-matches \
+  -H "Content-Type: application/json" \
+  -d '{"query":"Where are embeddings stored?","top_k":5}'
+```
+
+Response: `{ "query", "matches" }` — no `answer`, no LLM call.
 
 ## Tests and checks
 
@@ -159,14 +179,14 @@ Settings use the `ASKDOC_` prefix (see `.env.example`), including:
 ```
 src/askdoc/
   api/           # FastAPI routes
-  use_cases/     # ingest + query orchestration
+  use_cases/     # ingest + search-matches + query
   messaging/     # Celery app, tasks, dispatcher
   processing/    # chunking + embeddings
   storage/       # local files + pgvector store
   generation/    # LLM client + RAG prompts
 tests/
   processing/    # chunking
-  use_cases/     # ingest + query
+  use_cases/     # ingest + search-matches + query
   messaging/     # Celery tasks
   generation/    # RAG prompts
   api/           # route-level tests

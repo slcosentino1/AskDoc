@@ -129,7 +129,7 @@ make check   # compile + ruff + format check + tests
 make fix     # auto-fix lint/format
 ```
 
-Unit tests cover chunking, use cases, Celery task bodies (broker mocked via `send_task` / `.run()`), and HTTP routes with dependency overrides. No live RabbitMQ/Postgres required for `make test`.
+Tests mirror `src/askdoc/` (`tests/processing`, `tests/use_cases`, `tests/messaging`, …). They cover chunking, use cases, Celery task bodies (broker mocked via `send_task` / `.run()`), and HTTP routes with dependency overrides. No live RabbitMQ/Postgres required for `make test`.
 
 ## Makefile reference
 
@@ -165,6 +165,9 @@ src/askdoc/
   storage/       # local files + pgvector store
   generation/    # LLM client + RAG prompts
 tests/
-  unit/          # use cases, chunking, tasks
+  processing/    # chunking
+  use_cases/     # ingest + query
+  messaging/     # Celery tasks
+  generation/    # RAG prompts
   api/           # route-level tests
 ```

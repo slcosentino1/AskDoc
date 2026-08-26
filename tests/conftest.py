@@ -1,4 +1,4 @@
-"""Shared fixtures. Production code lives under src/; tests stay here."""
+"""Shared fixtures. Test packages mirror src/askdoc/ (processing, use_cases, …)."""
 
 from __future__ import annotations
 

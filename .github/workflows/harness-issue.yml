@@ -26,8 +26,8 @@ jobs:
     timeout-minutes: 90
     env:
       HARNESS_PYTHON: ${{ vars.HARNESS_PYTHON || 'python3' }}
-      HARNESS_CODEX_CLI: ${{ vars.HARNESS_CODEX_CLI || 'codex' }}
-      HARNESS_AILY_CLI: ${{ vars.HARNESS_AILY_CLI || 'aily' }}
+      HARNESS_CODEX_CLI: ${{ vars.HARNESS_CODEX_CLI || '/Users/slcosentino/.nvm/versions/node/v22.22.2/bin/codex' }}
+      HARNESS_AILY_CLI: ${{ vars.HARNESS_AILY_CLI || '/Users/slcosentino/.local/bin/aily' }}
       HARNESS_EXTRA_PATH: ${{ vars.HARNESS_EXTRA_PATH || '' }}
       HARNESS_GITHUB_BUDGET_USD: ${{ vars.HARNESS_GITHUB_BUDGET_USD || '0.50' }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -37,10 +37,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$HOME/.nvm/versions/node/v22.22.2/bin:$PATH"
           if [ -n "$HARNESS_EXTRA_PATH" ]; then
-            PATH="$HARNESS_EXTRA_PATH:$PATH"
+            export PATH="$HARNESS_EXTRA_PATH:$PATH"
           fi
-          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
 
           if ! command -v "$HARNESS_PYTHON" >/dev/null 2>&1; then
             echo "::error::Python was not found. Install Python 3.11+ or set the HARNESS_PYTHON repository variable."
@@ -51,21 +51,26 @@ jobs:
             exit 1
           fi
           if ! command -v "$HARNESS_CODEX_CLI" >/dev/null 2>&1; then
-            echo "::error::Codex CLI was not found. Install it or set the HARNESS_CODEX_CLI repository variable."
-            exit 1
-          fi
-          if ! "$HARNESS_CODEX_CLI" login status >/dev/null 2>&1; then
-            echo "::error::Codex CLI is unavailable or not authenticated for the runner service account."
+            echo "::error::Codex CLI was not found. Check HARNESS_CODEX_CLI."
             exit 1
           fi
           if ! command -v "$HARNESS_AILY_CLI" >/dev/null 2>&1; then
-            echo "::error::Aily CLI was not found. Install it or set the HARNESS_AILY_CLI repository variable."
+            echo "::error::Aily CLI was not found. Check HARNESS_AILY_CLI."
             exit 1
           fi
           if ! "$HARNESS_AILY_CLI" help claude >/dev/null 2>&1; then
             echo "::error::Aily CLI is unavailable or does not provide its Claude command."
             exit 1
           fi
+
+          # Aily's Entra-backed Codex launch writes the provider config used by
+          # Harness direct Codex CLI calls. Native Codex login status is not
+          # applicable to this Aily provider.
+          if ! "$HARNESS_AILY_CLI" codex --entra exec "Reply with exactly: OK" >/dev/null; then
+            echo "::error::Aily could not initialize or authenticate Codex through the Entra provider."
+            exit 1
+          fi
+
           if ! command -v gh >/dev/null 2>&1; then
             echo "::error::GitHub CLI (gh) was not found on the runner PATH."
             exit 1
@@ -95,7 +100,7 @@ jobs:
                   print("::error::Could not inspect the existing AskDoc workspace; checkout was stopped.")
                   raise SystemExit(1)
               unexpected = []
-              for record in result.stdout.split(b"\0"):
+              for record in result.stdout.split(b"\\0"):
                   if not record:
                       continue
                   path = record[3:]
@@ -136,10 +141,10 @@ jobs:
         working-directory: ${{ github.workspace }}/autonomous-engineering-harness
         run: |
           set -euo pipefail
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$HOME/.nvm/versions/node/v22.22.2/bin:$PATH"
           if [ -n "$HARNESS_EXTRA_PATH" ]; then
-            PATH="$HARNESS_EXTRA_PATH:$PATH"
+            export PATH="$HARNESS_EXTRA_PATH:$PATH"
           fi
-          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
 
           if [ -z "$GH_TOKEN" ]; then
             echo "::error::GitHub did not provide a token to the import step."
@@ -172,8 +177,8 @@ jobs:
           if not isinstance(status, str) or not re.fullmatch(r"[a-z_]{1,40}", status):
               raise SystemExit("Harness returned an invalid workflow status.")
           with open(output_path, "a", encoding="utf-8") as output:
-              output.write(f"workflow_id={workflow_id}\n")
-              output.write(f"status={status}\n")
+              output.write(f"workflow_id={workflow_id}\\n")
+              output.write(f"status={status}\\n")
           if status not in {"awaiting_approval", "complete", "rejected"}:
               print(
                   f"::error::Harness import stopped with status '{status}'. "

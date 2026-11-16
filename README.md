@@ -191,3 +191,75 @@ tests/
   generation/    # RAG prompts
   api/           # route-level tests
 ```
+
+## GitHub Issue automation on a self-hosted Mac
+
+The workflow in `.github/workflows/harness-issue.yml` imports an AskDoc Issue when the `agent:run` label is added. It checks out AskDoc and `slcosentino1/autonomous-engineering-harness` into separate directories, then calls the existing `github import` command with `--publish-pr`. The Harness creates a proposal and stops at `awaiting_approval`. The workflow never approves work, runs on pull request events, or merges pull requests.
+
+### Runner setup
+
+Register one dedicated, persistent macOS self-hosted runner for this repository. In GitHub, open Settings → Actions → Runners → New self-hosted runner, choose macOS and the machine architecture, and follow the displayed download and registration commands. The required labels are self-hosted, macOS, and askdoc-agent; GitHub adds the first two, and you add askdoc-agent. Use the repository URL https://github.com/slcosentino1/AskDoc. Keep the registration token private; GitHub's setup token is temporary and must not be committed.
+
+Run the runner service as a dedicated macOS user. Install it as a service with the runner's `svc.sh` commands from GitHub's setup instructions, then start it and confirm that it is online with the askdoc-agent label. Keep this one runner and its `_work` directory persistent: the Harness stores its Issue-to-workflow registry under `.engineering/workflows` in the AskDoc checkout. The workflow disables checkout cleanup for AskDoc so repeat events can reuse that registry. Do not delete that directory while an Issue workflow is active.
+
+The job explicitly adds /opt/homebrew/bin, /usr/local/bin, and the runner account's .local/bin to PATH. Install Python, Codex CLI, Aily CLI, and GitHub CLI (gh) in one of those directories, or set the repository Actions variables HARNESS_PYTHON, HARNESS_CODEX_CLI, and HARNESS_AILY_CLI to their executable paths. Set HARNESS_EXTRA_PATH to additional absolute runtime directories, separated by colons, such as the Node installation used by an NVM-installed Codex CLI. The runner service does not inherit an interactive terminal's PATH.
+
+Use Python 3.11 or newer. Authenticate Codex and Aily under the same macOS account that runs the runner service, not only under an interactive account. Configure and verify Codex as that account:
+
+    codex login
+    codex login status
+
+Set up the Aily/Claude credentials through the approved Aily login flow. For an Entra-backed setup, Aily provides:
+
+    aily claude --entra --login
+
+The job checks codex login status and verifies that Aily exposes its claude command. Harness calls Aily for the actual plan review; authentication failures stop the import with a failed Harness status or a CLI error in the job log. Do not print or copy provider keys into workflow logs, Issue text, or repository files. In particular, do not call aily get-api-key in a workflow because it prints a provider key. If a provider needs environment variables, configure them for the runner service account and restart the service before testing.
+
+### GitHub permissions and configuration
+
+The workflow grants its GitHub Actions token only issues: read; repository contents permission is none. The import step receives this token as GH_TOKEN for Harness GitHub CLI operations. The Harness passes GitHub credentials only to its gh subprocesses and removes them from Codex and Aily environments.
+
+Both checkout steps use the AskDoc repository secret ASKDOC_CHECKOUT_TOKEN, a fine-grained token with read-only Contents access to only slcosentino1/AskDoc and slcosentino1/autonomous-engineering-harness. This separate token is used by the checkout actions only. Checkout credentials are not persisted in either repository's Git configuration.
+
+The default total Claude/Aily budget is USD 0.50 per imported workflow. Set the AskDoc repository Actions variable `HARNESS_GITHUB_BUDGET_USD` to a different conservative amount if needed. This is a variable, not a secret. The workflow token has no write permissions. For later local Pull Request publication, the operator's local gh authentication must have repository Contents and Pull Requests write access. Authenticate that local CLI separately, for example with:
+
+    gh auth login --hostname github.com
+
+This local credential is used only when the operator runs approve or resume; it is not the workflow token.
+
+Before enabling the label, confirm that the runner has a clean AskDoc checkout apart from `.engineering/workflows`. Before checkout, the workflow fails if other tracked or untracked workspace changes remain; it does not clean or overwrite them. After a local approval changes tracked AskDoc files, finish publication and reconcile the runner worktree to the default branch before starting a different Issue workflow. The per-Issue Actions concurrency group serializes repeated runs for that Issue, and the Harness registry returns the existing workflow on a duplicate import. Keep one persistent runner for this target; separate runner machines do not share the local registry.
+
+### Triggering and approving an Issue
+
+Add the `agent:run` label to an Issue in slcosentino1/AskDoc. The workflow runs from the repository's default branch, checks out that branch, and ignores pull request issues and events from other repositories. Issue text is treated as untrusted task input by the Harness; the job does not execute code from an Issue branch.
+
+The Actions job summary reports the workflow ID, status, and proposal path. The proposal is stored in the runner's AskDoc checkout at:
+
+    $GITHUB_WORKSPACE/AskDoc/.engineering/workflows/WORKFLOW_ID/proposal.md
+
+Copy the AskDoc target path and workflow ID from the job summary, then review the proposal on the Mac. From a terminal running as the same account as the runner:
+
+    export HARNESS_GITHUB_ALLOWED_REPOSITORIES="slcosentino1/AskDoc"
+    python3 /path/to/autonomous-engineering-harness/harness/orchestrator.py status \
+      --target /absolute/path/to/runner/_work/AskDoc/AskDoc \
+      --workflow-id WORKFLOW_ID
+
+After reviewing the proposal, explicitly approve it:
+
+    python3 /path/to/autonomous-engineering-harness/harness/orchestrator.py approve \
+      --target /absolute/path/to/runner/_work/AskDoc/AskDoc \
+      --workflow-id WORKFLOW_ID
+
+If a saved stage failed, inspect status and retry only that stage with:
+
+    python3 /path/to/autonomous-engineering-harness/harness/orchestrator.py resume \
+      --target /absolute/path/to/runner/_work/AskDoc/AskDoc \
+      --workflow-id WORKFLOW_ID
+
+resume does not approve a proposal. The initial GitHub job stops at `awaiting_approval`; no automatic approval path is configured.
+
+### Pull Request publication
+
+`--publish-pr` records publication permission in the workflow authorization; it does not publish during Issue import. After local approval, implementation, code review, delivery verification, and the Harness commitment gate all pass, approve or resume can publish the reviewed change. Publication uses the locally authenticated gh account, requires its write access, a clean starting target, an unchanged default branch, and the matching AskDoc origin. The Harness creates a reviewed branch and Pull Request but never merges it. The GitHub Actions token only needs read access and cannot publish the Pull Request.
+
+Manual setup still required: commit and push the workflow and documentation to AskDoc's default branch, register and label the Mac runner, install the CLIs and Python, configure Codex/Aily authentication for the runner service user, create the read-only ASKDOC_CHECKOUT_TOKEN secret, and optionally set the Actions variables for custom CLI paths, extra PATH entries, or budget. No GitHub workflow run or runner registration was performed as part of this repository change.

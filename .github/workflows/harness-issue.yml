@@ -1,0 +1,203 @@
+name: Harness issue intake
+
+on:
+  issues:
+    types:
+      - labeled
+
+permissions:
+  contents: none
+  issues: read
+
+concurrency:
+  group: askdoc-harness-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  import:
+    if: >-
+      github.repository == 'slcosentino1/AskDoc' &&
+      github.event.label.name == 'agent:run' &&
+      github.event.issue.pull_request == null
+    runs-on:
+      - self-hosted
+      - macOS
+      - askdoc-agent
+    timeout-minutes: 90
+    env:
+      HARNESS_PYTHON: ${{ vars.HARNESS_PYTHON || 'python3' }}
+      HARNESS_CODEX_CLI: ${{ vars.HARNESS_CODEX_CLI || 'codex' }}
+      HARNESS_AILY_CLI: ${{ vars.HARNESS_AILY_CLI || 'aily' }}
+      HARNESS_EXTRA_PATH: ${{ vars.HARNESS_EXTRA_PATH || '' }}
+      HARNESS_GITHUB_BUDGET_USD: ${{ vars.HARNESS_GITHUB_BUDGET_USD || '0.50' }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+
+    steps:
+      - name: Validate runner tools and existing AskDoc workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$HARNESS_EXTRA_PATH" ]; then
+            PATH="$HARNESS_EXTRA_PATH:$PATH"
+          fi
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
+
+          if ! command -v "$HARNESS_PYTHON" >/dev/null 2>&1; then
+            echo "::error::Python was not found. Install Python 3.11+ or set the HARNESS_PYTHON repository variable."
+            exit 1
+          fi
+          if ! "$HARNESS_PYTHON" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' >/dev/null 2>&1; then
+            echo "::error::The Harness requires Python 3.11 or newer."
+            exit 1
+          fi
+          if ! command -v "$HARNESS_CODEX_CLI" >/dev/null 2>&1; then
+            echo "::error::Codex CLI was not found. Install it or set the HARNESS_CODEX_CLI repository variable."
+            exit 1
+          fi
+          if ! "$HARNESS_CODEX_CLI" login status >/dev/null 2>&1; then
+            echo "::error::Codex CLI is unavailable or not authenticated for the runner service account."
+            exit 1
+          fi
+          if ! command -v "$HARNESS_AILY_CLI" >/dev/null 2>&1; then
+            echo "::error::Aily CLI was not found. Install it or set the HARNESS_AILY_CLI repository variable."
+            exit 1
+          fi
+          if ! "$HARNESS_AILY_CLI" help claude >/dev/null 2>&1; then
+            echo "::error::Aily CLI is unavailable or does not provide its Claude command."
+            exit 1
+          fi
+          if ! command -v gh >/dev/null 2>&1; then
+            echo "::error::GitHub CLI (gh) was not found on the runner PATH."
+            exit 1
+          fi
+
+          "$HARNESS_PYTHON" - "$GITHUB_WORKSPACE/AskDoc" <<'PYTHON'
+          import subprocess
+          import sys
+
+          from pathlib import Path
+
+          target = Path(sys.argv[1])
+          if target.exists():
+              root = subprocess.run(
+                  ["git", "-C", str(target), "rev-parse", "--show-toplevel"],
+                  capture_output=True, text=True,
+              )
+              if root.returncode or Path(root.stdout.strip()).resolve() != target.resolve():
+                  print("::error::The existing AskDoc workspace is not a Git checkout at the expected path.")
+                  raise SystemExit(1)
+              result = subprocess.run(
+                  ["git", "-C", str(target), "status", "--porcelain=v1", "-z",
+                   "--untracked-files=all", "--no-renames", "--ignore-submodules=none"],
+                  capture_output=True,
+              )
+              if result.returncode:
+                  print("::error::Could not inspect the existing AskDoc workspace; checkout was stopped.")
+                  raise SystemExit(1)
+              unexpected = []
+              for record in result.stdout.split(b"\0"):
+                  if not record:
+                      continue
+                  path = record[3:]
+                  if path != b".engineering/workflows" and not path.startswith(b".engineering/workflows/"):
+                      unexpected.append(path)
+              if unexpected:
+                  print(
+                      "::error::AskDoc has changes outside .engineering/workflows. "
+                      "Checkout was stopped to preserve them; clean or reconcile the workspace, then retry."
+                  )
+                  raise SystemExit(1)
+          PYTHON
+
+      - name: Check out AskDoc
+        uses: actions/checkout@v4
+        with:
+          repository: slcosentino1/AskDoc
+          token: ${{ secrets.ASKDOC_CHECKOUT_TOKEN }}
+          ref: ${{ github.event.repository.default_branch }}
+          path: AskDoc
+          clean: false
+          persist-credentials: false
+
+      - name: Check out the Autonomous Engineering Harness
+        uses: actions/checkout@v4
+        with:
+          repository: slcosentino1/autonomous-engineering-harness
+          path: autonomous-engineering-harness
+          token: ${{ secrets.ASKDOC_CHECKOUT_TOKEN }}
+          persist-credentials: false
+
+      - name: Import Issue and create proposal
+        id: harness_import
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HARNESS_GITHUB_ALLOWED_REPOSITORIES: slcosentino1/AskDoc
+        working-directory: ${{ github.workspace }}/autonomous-engineering-harness
+        run: |
+          set -euo pipefail
+          if [ -n "$HARNESS_EXTRA_PATH" ]; then
+            PATH="$HARNESS_EXTRA_PATH:$PATH"
+          fi
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
+
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::GitHub did not provide a token to the import step."
+            exit 1
+          fi
+          if ! gh auth status --hostname github.com >/dev/null 2>&1; then
+            echo "::error::The GitHub token is unavailable to gh. Check the workflow's issues:read permission and repository access."
+            exit 1
+          fi
+
+          result="$("$HARNESS_PYTHON" harness/orchestrator.py github import "$ISSUE_NUMBER" \
+            --target "$GITHUB_WORKSPACE/AskDoc" \
+            --repository slcosentino1/AskDoc \
+            --budget-usd "$HARNESS_GITHUB_BUDGET_USD" \
+            --codex "$HARNESS_CODEX_CLI" \
+            --aily "$HARNESS_AILY_CLI" \
+            --publish-pr)"
+
+          "$HARNESS_PYTHON" - "$GITHUB_OUTPUT" "$result" <<'PYTHON'
+          import json
+          import re
+          import sys
+
+          output_path, raw = sys.argv[1:]
+          result = json.loads(raw)
+          workflow_id = result.get("workflow_id")
+          status = result.get("status")
+          if not isinstance(workflow_id, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}", workflow_id):
+              raise SystemExit("Harness returned an invalid workflow ID.")
+          if not isinstance(status, str) or not re.fullmatch(r"[a-z_]{1,40}", status):
+              raise SystemExit("Harness returned an invalid workflow status.")
+          with open(output_path, "a", encoding="utf-8") as output:
+              output.write(f"workflow_id={workflow_id}\n")
+              output.write(f"status={status}\n")
+          if status not in {"awaiting_approval", "complete", "rejected"}:
+              print(
+                  f"::error::Harness import stopped with status '{status}'. "
+                  "Use the local Harness status or resume command to inspect and recover it.",
+                  file=sys.stderr,
+              )
+              raise SystemExit(1)
+          PYTHON
+
+      - name: Report workflow ID and proposal location
+        if: always() && steps.harness_import.outputs.workflow_id != ''
+        shell: bash
+        env:
+          WORKFLOW_ID: ${{ steps.harness_import.outputs.workflow_id }}
+          WORKFLOW_STATUS: ${{ steps.harness_import.outputs.status }}
+        run: |
+          {
+            echo "## Harness Issue intake"
+            echo
+            echo "- Issue: #$ISSUE_NUMBER"
+            echo "- Target: $GITHUB_WORKSPACE/AskDoc"
+            echo "- Workflow ID: $WORKFLOW_ID"
+            echo "- Status: $WORKFLOW_STATUS"
+            echo "- Proposal: AskDoc/.engineering/workflows/$WORKFLOW_ID/proposal.md"
+            echo
+            echo "The proposal is on the self-hosted runner in the AskDoc checkout. Review it before running the local Harness approval command."
+          } >> "$GITHUB_STEP_SUMMARY"

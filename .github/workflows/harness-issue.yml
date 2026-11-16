@@ -26,8 +26,8 @@ jobs:
     timeout-minutes: 90
     env:
       HARNESS_PYTHON: ${{ vars.HARNESS_PYTHON || 'python3' }}
-      HARNESS_CODEX_CLI: ${{ vars.HARNESS_CODEX_CLI || '/Users/slcosentino/.nvm/versions/node/v22.22.2/bin/codex' }}
-      HARNESS_AILY_CLI: ${{ vars.HARNESS_AILY_CLI || '/Users/slcosentino/.local/bin/aily' }}
+      HARNESS_CODEX_CLI: ${{ vars.HARNESS_CODEX_CLI || 'codex' }}
+      HARNESS_AILY_CLI: ${{ vars.HARNESS_AILY_CLI || 'aily' }}
       HARNESS_EXTRA_PATH: ${{ vars.HARNESS_EXTRA_PATH || '' }}
       HARNESS_GITHUB_BUDGET_USD: ${{ vars.HARNESS_GITHUB_BUDGET_USD || '0.50' }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -37,7 +37,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$HOME/.nvm/versions/node/v22.22.2/bin:$PATH"
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
           if [ -n "$HARNESS_EXTRA_PATH" ]; then
             export PATH="$HARNESS_EXTRA_PATH:$PATH"
           fi

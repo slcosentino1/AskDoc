@@ -63,6 +63,13 @@ jobs:
             exit 1
           fi
 
+          # Initialize Aily's local configuration in the same non-interactive
+          # shell environment used by GitHub Actions.
+          if ! "$HARNESS_AILY_CLI" doctor; then
+            echo "::error::Aily doctor could not initialize the runner environment."
+            exit 1
+          fi
+
           # Aily's Entra-backed Codex launch writes the provider config used by
           # Harness direct Codex CLI calls. Native Codex login status is not
           # applicable to this Aily provider.
@@ -141,7 +148,7 @@ jobs:
         working-directory: ${{ github.workspace }}/autonomous-engineering-harness
         run: |
           set -euo pipefail
-          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$HOME/.nvm/versions/node/v22.22.2/bin:$PATH"
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
           if [ -n "$HARNESS_EXTRA_PATH" ]; then
             export PATH="$HARNESS_EXTRA_PATH:$PATH"
           fi

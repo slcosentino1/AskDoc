@@ -37,7 +37,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
+          export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
           if [ -n "$HARNESS_EXTRA_PATH" ]; then
             export PATH="$HARNESS_EXTRA_PATH:$PATH"
           fi
@@ -60,13 +60,6 @@ jobs:
           fi
           if ! "$HARNESS_AILY_CLI" help claude >/dev/null 2>&1; then
             echo "::error::Aily CLI is unavailable or does not provide its Claude command."
-            exit 1
-          fi
-
-          # Initialize Aily's local configuration in the same non-interactive
-          # shell environment used by GitHub Actions.
-          if ! "$HARNESS_AILY_CLI" doctor; then
-            echo "::error::Aily doctor could not initialize the runner environment."
             exit 1
           fi
 

@@ -172,6 +172,7 @@ jobs:
           fi
           printf '%s\n' "$doctor_output" | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g'
 
+          clean_path="/Users/slcosentino/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
           echo "=== Terminal and macOS keychain diagnostics ==="
           echo "Workflow stdin is a TTY: $(test -t 0 && echo yes || echo no)"
           echo "script utility: $(command -v script || echo unavailable)"
@@ -194,7 +195,6 @@ jobs:
           fi
 
           echo "=== Aily doctor with clean environment (email redacted) ==="
-          clean_path="/Users/slcosentino/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
           if doctor_output="$(env -i HOME="$HOME" PATH="$clean_path" "$HARNESS_AILY_CLI" doctor 2>&1)"; then
             echo "Clean environment result: success"
           else

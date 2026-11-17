@@ -263,3 +263,11 @@ resume does not approve a proposal. The initial GitHub job stops at `awaiting_ap
 `--publish-pr` records publication permission in the workflow authorization; it does not publish during Issue import. After local approval, implementation, code review, delivery verification, and the Harness commitment gate all pass, approve or resume can publish the reviewed change. Publication uses the locally authenticated gh account, requires its write access, a clean starting target, an unchanged default branch, and the matching AskDoc origin. The Harness creates a reviewed branch and Pull Request but never merges it. The GitHub Actions token only needs read access and cannot publish the Pull Request.
 
 Manual setup still required: commit and push the workflow and documentation to AskDoc's default branch, register and label the Mac runner, install the CLIs and Python, configure Codex/Aily authentication for the runner service user, create the read-only ASKDOC_CHECKOUT_TOKEN secret, and optionally set the Actions variables for custom CLI paths, extra PATH entries, or budget. No GitHub workflow run or runner registration was performed as part of this repository change.
+
+## Project ownership and permissions
+
+Copyright © 2026 Sebastian Cosentino. All rights reserved.
+
+This repository is public for viewing and evaluation. Unless you have separate, express written permission from the copyright holder, no license is granted to use, copy, modify, adapt, publish, distribute, sublicense, or create derivative works from this project's code or documentation. Public visibility on GitHub does not place this project in the public domain or make it open source.
+
+The project may include references to and integrations with third-party tools. Their names and trademarks belong to their respective owners; this notice applies only to original material in this repository.

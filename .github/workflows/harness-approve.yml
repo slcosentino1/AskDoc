@@ -18,7 +18,7 @@ jobs:
     if: >-
       github.repository == 'slcosentino1/AskDoc' &&
       github.event.issue.pull_request == null &&
-      github.event.comment.body == '/harness approve' &&
+      startsWith(github.event.comment.body, '/harness approve') &&
       github.event.comment.author_association == 'OWNER' &&
       (contains(toJSON(github.event.issue.labels.*.name), 'agent:review') || contains(toJSON(github.event.issue.labels.*.name), 'agent:run'))
     runs-on:
@@ -33,6 +33,7 @@ jobs:
       HARNESS_EXTRA_PATH: ${{ vars.HARNESS_EXTRA_PATH || '' }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
       ISSUE_BODY: ${{ github.event.issue.body }}
+      ISSUE_COMMENT_BODY: ${{ github.event.comment.body }}
       GH_TOKEN: ${{ github.token }}
       HARNESS_GITHUB_ALLOWED_REPOSITORIES: slcosentino1/AskDoc
 
@@ -88,6 +89,27 @@ jobs:
               output.write(f"workflow_id={workflow_id}\n")
           PYTHON
 
+      - name: Prepare approval conditions
+        id: conditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$HARNESS_PYTHON" - "$RUNNER_TEMP/approval-conditions.md" <<'PYTHON'
+          import os
+          import sys
+          from pathlib import Path
+
+          body = os.environ.get("ISSUE_COMMENT_BODY", "").replace("\r\n", "\n").replace("\r", "\n")
+          lines = body.split("\n")
+          if not lines or lines[0].strip() != "/harness approve":
+              raise SystemExit("Approval comment must start with an exact '/harness approve' command.")
+          conditions = "\n".join(lines[1:]).strip()
+          if len(conditions) > 12_000:
+              raise SystemExit("Approval conditions must not exceed 12,000 characters.")
+          Path(sys.argv[1]).write_text(conditions + ("\n" if conditions else ""), encoding="utf-8")
+          print(f"Approval conditions captured: {'yes' if conditions else 'no'}")
+          PYTHON
+
       - name: Mark issue as implementation started
         shell: bash
         run: |
@@ -115,6 +137,7 @@ jobs:
           "$HARNESS_PYTHON" harness/orchestrator.py approve \
             --target "$GITHUB_WORKSPACE/AskDoc" \
             --workflow-id "$WORKFLOW_ID" \
+            --conditions-file "$RUNNER_TEMP/approval-conditions.md" \
             --codex "$HARNESS_CODEX_CLI" \
             --aily "$HARNESS_AILY_CLI"
 

@@ -142,6 +142,37 @@ jobs:
           echo "AILY_USER_ID present: yes"
           echo "AILY_ENTRA_TOKEN present: yes"
 
+          echo "=== Aily Zsh initialization diagnostics ==="
+          aily_zshrc="$HOME/.aily/aily.zshrc"
+          if [ -f "$aily_zshrc" ]; then
+            echo "aily.zshrc exists: yes"
+            ls -l "$aily_zshrc"
+            echo "Identity-related declarations (names only):"
+            grep -Ein '(^|[[:space:]])(export[[:space:]]+)?(AILY_[A-Z0-9_]*|[A-Z0-9_]*(EMAIL|USER|ENTRA|TOKEN)[A-Z0-9_]*)=' "$aily_zshrc" \
+              | sed -E 's/=.*$/=<redacted>/' || true
+          else
+            echo "::error::Aily zshrc is missing."
+            exit 1
+          fi
+
+          echo "=== Aily doctor from non-interactive zsh ==="
+          if doctor_output="$(/bin/zsh -c '"$HOME/.local/bin/aily" doctor' 2>&1)"; then
+            printf '%s\n' "$doctor_output" | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g'
+          else
+            printf '%s\n' "$doctor_output" | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g'
+            echo "::error::Aily doctor failed from non-interactive zsh."
+            exit 1
+          fi
+
+          echo "=== Aily doctor from interactive zsh ==="
+          if doctor_output="$(/bin/zsh -ic '"$HOME/.local/bin/aily" doctor' 2>&1)"; then
+            printf '%s\n' "$doctor_output" | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g'
+          else
+            printf '%s\n' "$doctor_output" | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g'
+            echo "::error::Aily doctor failed from interactive zsh."
+            exit 1
+          fi
+
           echo "=== Aily doctor with clean environment (email redacted) ==="
           clean_path="/Users/slcosentino/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
           if doctor_output="$(env -i HOME="$HOME" PATH="$clean_path" "$HARNESS_AILY_CLI" doctor 2>&1)"; then

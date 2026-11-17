@@ -172,6 +172,27 @@ jobs:
           fi
           printf '%s\n' "$doctor_output" | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g'
 
+          echo "=== Terminal and macOS keychain diagnostics ==="
+          echo "Workflow stdin is a TTY: $(test -t 0 && echo yes || echo no)"
+          echo "script utility: $(command -v script || echo unavailable)"
+          echo "User keychain search list:"
+          security list-keychains -d user 2>&1 | sed -E 's/.*\/([^/]+\.keychain[^"]*).*/[keychain: \1]/'
+          echo "User keychain lock status (if supported):"
+          security show-keychain-info "$HOME/Library/Keychains/login.keychain-db" 2>&1 | sed -E 's/(password|passphrase).*/[redacted]/Ig' || true
+
+          echo "=== Aily doctor with pseudo-terminal ==="
+          if command -v script >/dev/null 2>&1; then
+            if pty_output="$(script -q /dev/null env HOME="$HOME" PATH="$clean_path" "$HOME/.local/bin/aily" doctor 2>&1)"; then
+              echo "Pseudo-terminal result: success"
+            else
+              pty_status=$?
+              echo "Pseudo-terminal result: failed (exit $pty_status)"
+            fi
+            printf '%s\n' "$pty_output" | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g'
+          else
+            echo "Pseudo-terminal test skipped: script utility unavailable"
+          fi
+
           echo "=== Aily doctor with clean environment (email redacted) ==="
           clean_path="/Users/slcosentino/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
           if doctor_output="$(env -i HOME="$HOME" PATH="$clean_path" "$HARNESS_AILY_CLI" doctor 2>&1)"; then

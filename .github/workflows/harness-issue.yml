@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: none
-  issues: read
+  issues: write
 
 concurrency:
   group: askdoc-harness-issue-${{ github.event.issue.number }}
@@ -334,6 +334,23 @@ jobs:
               )
               raise SystemExit(1)
           PYTHON
+
+      - name: Publish proposal status to the Issue
+        if: steps.harness_import.outputs.workflow_id != '' && steps.harness_import.outputs.status == 'awaiting_approval'
+        working-directory: ${{ github.workspace }}/autonomous-engineering-harness
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HARNESS_GITHUB_ALLOWED_REPOSITORIES: slcosentino1/AskDoc
+          WORKFLOW_ID: ${{ steps.harness_import.outputs.workflow_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
+          if [ -n "$HARNESS_EXTRA_PATH" ]; then export PATH="$HARNESS_EXTRA_PATH:$PATH"; fi
+          "$HARNESS_PYTHON" harness/orchestrator.py github report "$WORKFLOW_ID" --target "$GITHUB_WORKSPACE/AskDoc"
+          gh label create "agent:review" --color "FBCA04" --description "Harness proposal is ready for human review" --force
+          gh api --method POST "repos/slcosentino1/AskDoc/issues/$ISSUE_NUMBER/labels" -f labels[]="agent:review" >/dev/null
+          gh api --method DELETE "repos/slcosentino1/AskDoc/issues/$ISSUE_NUMBER/labels/agent:run" >/dev/null || true
 
       - name: Report workflow ID and proposal location
         if: always() && steps.harness_import.outputs.workflow_id != ''

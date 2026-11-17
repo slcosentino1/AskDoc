@@ -30,6 +30,8 @@ jobs:
       HARNESS_AILY_CLI: ${{ vars.HARNESS_AILY_CLI || 'aily' }}
       HARNESS_EXTRA_PATH: ${{ vars.HARNESS_EXTRA_PATH || '' }}
       HARNESS_GITHUB_BUDGET_USD: ${{ vars.HARNESS_GITHUB_BUDGET_USD || '0.50' }}
+      AILY_USER_ID: ${{ secrets.AILY_USER_ID }}
+      AILY_ENTRA_TOKEN: ${{ secrets.AILY_ENTRA_TOKEN }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
 
     steps:
@@ -112,6 +114,18 @@ jobs:
           else
             echo "config.json missing"
           fi
+
+          echo "=== Aily authentication environment ==="
+          if [ -z "${AILY_USER_ID:-}" ]; then
+            echo "::error::GitHub Actions secret AILY_USER_ID is missing."
+            exit 1
+          fi
+          if [ -z "${AILY_ENTRA_TOKEN:-}" ]; then
+            echo "::error::GitHub Actions secret AILY_ENTRA_TOKEN is missing."
+            exit 1
+          fi
+          echo "AILY_USER_ID present: yes"
+          echo "AILY_ENTRA_TOKEN present: yes"
 
           echo "=== Aily doctor (email redacted) ==="
           if doctor_output="$("$HARNESS_AILY_CLI" doctor 2>&1)"; then

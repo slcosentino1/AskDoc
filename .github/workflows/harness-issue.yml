@@ -188,9 +188,16 @@ jobs:
           import subprocess
           import sys
 
+          import os
+          from pathlib import Path
+
           command = [sys.argv[1], "codex", "--entra", "exec", "Reply with exactly: OK"]
+          workdir = Path(os.environ["GITHUB_WORKSPACE"]) / "AskDoc"
+          if not (workdir / ".git").exists():
+              print(f"::error::Expected existing AskDoc Git checkout was not found at {workdir}.")
+              raise SystemExit(1)
           try:
-              result = subprocess.run(command, capture_output=True, text=True, timeout=180)
+              result = subprocess.run(command, cwd=workdir, capture_output=True, text=True, timeout=180)
           except subprocess.TimeoutExpired as exc:
               print(exc.stdout or "")
               print(exc.stderr or "", file=sys.stderr)

@@ -54,19 +54,61 @@ jobs:
             echo "::error::Codex CLI was not found. Check HARNESS_CODEX_CLI."
             exit 1
           fi
+          echo "=== Runner identity ==="
+          whoami
+          echo "HOME=$HOME"
+          echo "PWD=$PWD"
+          echo "SHELL=${SHELL:-unknown}"
+
+          echo "=== Aily resolution ==="
           if ! command -v "$HARNESS_AILY_CLI" >/dev/null 2>&1; then
             echo "::error::Aily CLI was not found. Check HARNESS_AILY_CLI."
             exit 1
           fi
+          echo "HARNESS_AILY_CLI=$HARNESS_AILY_CLI"
+          command -v "$HARNESS_AILY_CLI"
+
+          aily_version="$("$HARNESS_AILY_CLI" --version 2>&1)" || {
+            printf '%s\n' "$aily_version" | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g'
+            echo "::error::Aily version check failed."
+            exit 1
+          }
+          printf '%s\n' "$aily_version" | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g'
+
           if ! "$HARNESS_AILY_CLI" help claude >/dev/null 2>&1; then
             echo "::error::Aily CLI is unavailable or does not provide its Claude command."
             exit 1
           fi
 
+          echo "=== Aily doctor (email redacted) ==="
+          if doctor_output="$("$HARNESS_AILY_CLI" doctor 2>&1)"; then
+            printf '%s\n' "$doctor_output" | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g'
+          else
+            printf '%s\n' "$doctor_output" | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g'
+            echo "::error::Aily doctor failed in the Actions runner environment."
+            exit 1
+          fi
+
+          echo "=== Codex configuration presence ==="
+          if [ -d "$HOME/.codex" ]; then
+            ls -ld "$HOME/.codex"
+          else
+            echo "Codex config directory does not exist."
+          fi
+          if [ -f "$HOME/.codex/config.toml" ]; then
+            ls -l "$HOME/.codex/config.toml"
+          else
+            echo "Codex config.toml does not exist."
+          fi
+
           # Aily's Entra-backed Codex launch writes the provider config used by
           # Harness direct Codex CLI calls. Native Codex login status is not
           # applicable to this Aily provider.
-          if ! "$HARNESS_AILY_CLI" codex --entra exec "Reply with exactly: OK" >/dev/null; then
+          echo "=== Aily Entra Codex smoke test ==="
+          if codex_output="$("$HARNESS_AILY_CLI" codex --entra exec "Reply with exactly: OK" 2>&1)"; then
+            printf '%s\n' "$codex_output" | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g'
+          else
+            printf '%s\n' "$codex_output" | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g'
             echo "::error::Aily could not initialize or authenticate Codex through the Entra provider."
             exit 1
           fi
@@ -178,7 +220,7 @@ jobs:
               raise SystemExit("Harness returned an invalid workflow status.")
           with open(output_path, "a", encoding="utf-8") as output:
               output.write(f"workflow_id={workflow_id}\n")
-              output.write(f"status={status}\\n")
+              output.write(f"status={status}\n")
           if status not in {"awaiting_approval", "complete", "rejected"}:
               print(
                   f"::error::Harness import stopped with status '{status}'. "

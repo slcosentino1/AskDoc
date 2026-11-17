@@ -1,0 +1,4 @@
+# Repository-wide ownership. Keep security-sensitive automation under explicit review.
+/* @slcosentino1
+/.github/ @slcosentino1
+/src/askdoc/ @slcosentino1

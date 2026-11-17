@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Check out AskDoc
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: slcosentino1/AskDoc
           token: ${{ secrets.ASKDOC_CHECKOUT_TOKEN }}
@@ -49,10 +49,10 @@ jobs:
           persist-credentials: false
 
       - name: Check out Harness
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: slcosentino1/autonomous-engineering-harness
-          ref: feat/approval-conditions
+          ref: 9c3eb06721beaefce3b5d093130feae9683a117a # reviewed Harness main snapshot
           path: autonomous-engineering-harness
           token: ${{ secrets.ASKDOC_CHECKOUT_TOKEN }}
           persist-credentials: false

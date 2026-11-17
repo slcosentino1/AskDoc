@@ -108,6 +108,9 @@ jobs:
               value = os.environ.get(name)
               print(f"{name} present:", bool(value))
           PYTHON
+          echo "=== Aily config SHA-256 ==="
+          shasum -a 256 "$HOME/.aily/config.json"
+
           echo "Aily config file metadata:"
           if [ -f "$HOME/.aily/config.json" ]; then
             ls -l "$HOME/.aily/config.json"

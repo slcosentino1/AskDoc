@@ -80,6 +80,39 @@ jobs:
             exit 1
           fi
 
+          echo "=== Aily identity diagnostics (values redacted) ==="
+          python3 - "$HOME/.aily/config.json" <<'PYTHON'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          print("Config exists:", path.is_file())
+          print("Config readable:", path.is_file() and os.access(path, os.R_OK))
+          if path.is_file() and os.access(path, os.R_OK):
+              try:
+                  data = json.loads(path.read_text())
+                  email = data.get("email", "")
+                  print("Config JSON valid: yes")
+                  print("Email configured:", bool(email))
+                  print("Email type:", type(email).__name__)
+                  print("Email length:", len(email) if isinstance(email, str) else 0)
+                  print("Email contains @:", isinstance(email, str) and "@" in email)
+              except Exception as exc:
+                  print("Config JSON valid: no")
+                  print("Config read error type:", type(exc).__name__)
+          for name in ("AILY_USER_ID", "AILY_ENTRA_TOKEN", "HOME", "SHELL", "PATH"):
+              value = os.environ.get(name)
+              print(f"{name} present:", bool(value))
+          PYTHON
+          echo "Aily config file metadata:"
+          if [ -f "$HOME/.aily/config.json" ]; then
+            ls -l "$HOME/.aily/config.json"
+          else
+            echo "config.json missing"
+          fi
+
           echo "=== Aily doctor (email redacted) ==="
           if doctor_output="$("$HARNESS_AILY_CLI" doctor 2>&1)"; then
             printf '%s\n' "$doctor_output" | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g'

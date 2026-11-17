@@ -52,6 +52,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: slcosentino1/autonomous-engineering-harness
+          ref: feat/approval-conditions
           path: autonomous-engineering-harness
           token: ${{ secrets.ASKDOC_CHECKOUT_TOKEN }}
           persist-credentials: false

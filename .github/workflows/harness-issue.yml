@@ -62,6 +62,18 @@ jobs:
           echo "PWD=$PWD"
           echo "SHELL=${SHELL:-unknown}"
 
+          echo "=== Python tooling ==="
+          command -v uv || true
+          command -v uvx || true
+          uv --version || true
+          uvx --version || true
+
+          echo "=== Aily launcher ==="
+          aily_path="$(command -v "$HARNESS_AILY_CLI")"
+          echo "Aily executable: $aily_path"
+          file "$aily_path" || true
+          head -n 5 "$aily_path" 2>/dev/null | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g' || true
+
           echo "=== Aily resolution ==="
           if ! command -v "$HARNESS_AILY_CLI" >/dev/null 2>&1; then
             echo "::error::Aily CLI was not found. Check HARNESS_AILY_CLI."

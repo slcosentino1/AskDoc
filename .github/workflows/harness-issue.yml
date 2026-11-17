@@ -74,6 +74,15 @@ jobs:
           file "$aily_path" || true
           head -n 5 "$aily_path" 2>/dev/null | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:].-]+/[redacted-email]/g' || true
 
+          # Aily intentionally skips work-email detection in CI. Use a narrow
+          # wrapper so only Aily child processes omit CI/GITHUB_ACTIONS; the
+          # GitHub Actions job itself keeps its normal environment.
+          aily_wrapper="$RUNNER_TEMP/aily-ci"
+          printf '#!/bin/bash\nexec /usr/bin/env -u CI -u GITHUB_ACTIONS %q "$@"\n' "$aily_path" > "$aily_wrapper"
+          chmod 700 "$aily_wrapper"
+          echo "HARNESS_AILY_CLI=$aily_wrapper" >> "$GITHUB_ENV"
+          HARNESS_AILY_CLI="$aily_wrapper"
+
           echo "=== Aily resolution ==="
           if ! command -v "$HARNESS_AILY_CLI" >/dev/null 2>&1; then
             echo "::error::Aily CLI was not found. Check HARNESS_AILY_CLI."

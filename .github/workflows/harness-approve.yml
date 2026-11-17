@@ -72,7 +72,7 @@ jobs:
           import sys
 
           comments_path, output_path = sys.argv[1:]
-          comments = json.load(open(comments_path, encoding="utf-8"))
+          comments = json.load(open(comments_path, encoding="utf-8"))\n          if comments and isinstance(comments[0], list):\n              comments = [item for page in comments for item in page]
           marker = re.compile(r"<!-- harness-workflow:([A-Za-z0-9][A-Za-z0-9._-]{0,79}) -->")
           matches = set()
           for comment in comments:

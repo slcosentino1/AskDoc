@@ -20,7 +20,7 @@ jobs:
       github.event.issue.pull_request == null &&
       github.event.comment.body == '/harness approve' &&
       github.event.comment.author_association == 'OWNER' &&
-      contains(toJSON(github.event.issue.labels.*.name), 'agent:review')
+      (contains(toJSON(github.event.issue.labels.*.name), 'agent:review') || contains(toJSON(github.event.issue.labels.*.name), 'agent:run'))
     runs-on:
       - self-hosted
       - macOS
@@ -75,7 +75,7 @@ jobs:
           pages = json.load(open(comments_path, encoding="utf-8"))
           comments = [item for page in pages for item in page]
           marker = re.compile(r"<!-- harness-workflow:([A-Za-z0-9][A-Za-z0-9._-]{0,79}) -->")
-          matches = set()
+          matches = set(marker.findall(__import__("os").environ.get("ISSUE_BODY", "")))
           for comment in comments:
               body = comment.get("body", "") if isinstance(comment, dict) else ""
               if isinstance(body, str):

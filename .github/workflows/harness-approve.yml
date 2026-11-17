@@ -10,7 +10,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: askdoc-harness-issue-${{ github.event.issue.number }}
+  group: askdoc-harness-issue-\${{ github.event.issue.number }}
   cancel-in-progress: false
 
 jobs:
@@ -27,21 +27,21 @@ jobs:
       - askdoc-agent
     timeout-minutes: 180
     env:
-      HARNESS_PYTHON: ${{ vars.HARNESS_PYTHON || 'python3' }}
-      HARNESS_CODEX_CLI: ${{ vars.HARNESS_CODEX_CLI || 'codex' }}
-      HARNESS_AILY_CLI: ${{ vars.HARNESS_AILY_CLI || 'aily' }}
-      HARNESS_EXTRA_PATH: ${{ vars.HARNESS_EXTRA_PATH || '' }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
-      GH_TOKEN: ${{ github.token }}
+      HARNESS_PYTHON: \${{ vars.HARNESS_PYTHON || 'python3' }}
+      HARNESS_CODEX_CLI: \${{ vars.HARNESS_CODEX_CLI || 'codex' }}
+      HARNESS_AILY_CLI: \${{ vars.HARNESS_AILY_CLI || 'aily' }}
+      HARNESS_EXTRA_PATH: \${{ vars.HARNESS_EXTRA_PATH || '' }}
+      ISSUE_NUMBER: \${{ github.event.issue.number }}
+      GH_TOKEN: \${{ github.token }}
       HARNESS_GITHUB_ALLOWED_REPOSITORIES: slcosentino1/AskDoc
 
     steps:
-      - name: Validate runner and check out AskDoc
+      - name: Check out AskDoc
         uses: actions/checkout@v4
         with:
           repository: slcosentino1/AskDoc
-          token: ${{ secrets.ASKDOC_CHECKOUT_TOKEN }}
-          ref: ${{ github.event.repository.default_branch }}
+          token: \${{ secrets.ASKDOC_CHECKOUT_TOKEN }}
+          ref: \${{ github.event.repository.default_branch }}
           path: AskDoc
           clean: false
           persist-credentials: false
@@ -51,7 +51,7 @@ jobs:
         with:
           repository: slcosentino1/autonomous-engineering-harness
           path: autonomous-engineering-harness
-          token: ${{ secrets.ASKDOC_CHECKOUT_TOKEN }}
+          token: \${{ secrets.ASKDOC_CHECKOUT_TOKEN }}
           persist-credentials: false
 
       - name: Resolve workflow ID from Harness proposal comment
@@ -65,14 +65,15 @@ jobs:
           command -v "$HARNESS_CODEX_CLI" >/dev/null
           command -v gh >/dev/null
           gh auth status --hostname github.com >/dev/null
-          gh api --paginate "repos/slcosentino1/AskDoc/issues/$ISSUE_NUMBER/comments" > "$RUNNER_TEMP/issue-comments.json"
+          gh api --paginate --slurp "repos/slcosentino1/AskDoc/issues/$ISSUE_NUMBER/comments" > "$RUNNER_TEMP/issue-comments.json"
           "$HARNESS_PYTHON" - "$RUNNER_TEMP/issue-comments.json" "$GITHUB_OUTPUT" <<'PYTHON'
           import json
           import re
           import sys
 
           comments_path, output_path = sys.argv[1:]
-          comments = json.load(open(comments_path, encoding="utf-8"))\n          if comments and isinstance(comments[0], list):\n              comments = [item for page in comments for item in page]
+          pages = json.load(open(comments_path, encoding="utf-8"))
+          comments = [item for page in pages for item in page]
           marker = re.compile(r"<!-- harness-workflow:([A-Za-z0-9][A-Za-z0-9._-]{0,79}) -->")
           matches = set()
           for comment in comments:
@@ -83,7 +84,7 @@ jobs:
               raise SystemExit(f"Expected exactly one Harness workflow marker on issue; found {len(matches)}.")
           workflow_id = next(iter(matches))
           with open(output_path, "a", encoding="utf-8") as output:
-              output.write(f"workflow_id={workflow_id}\\n")
+              output.write(f"workflow_id={workflow_id}\n")
           PYTHON
 
       - name: Mark issue as implementation started
@@ -91,36 +92,36 @@ jobs:
         run: |
           set -euo pipefail
           gh label create "agent:implement" --color "1D76DB" --description "Harness implementation is running" --force
-          gh api --method POST "repos/slcosentino1/AskDoc/issues/$ISSUE_NUMBER/labels" -f labels[]="agent:implement" >/dev/null
+          gh api --method POST "repos/slcosentino1/AskDoc/issues/$ISSUE_NUMBER/labels" -f 'labels[]=agent:implement' >/dev/null
           gh api --method DELETE "repos/slcosentino1/AskDoc/issues/$ISSUE_NUMBER/labels/agent:review" >/dev/null
 
       - name: Approve proposal and run implementation
         id: harness_approve
-        working-directory: ${{ github.workspace }}/autonomous-engineering-harness
+        working-directory: \${{ github.workspace }}/autonomous-engineering-harness
         shell: bash
         env:
-          WORKFLOW_ID: ${{ steps.resolve.outputs.workflow_id }}
+          WORKFLOW_ID: \${{ steps.resolve.outputs.workflow_id }}
         run: |
           set -euo pipefail
           export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
           if [ -n "$HARNESS_EXTRA_PATH" ]; then export PATH="$HARNESS_EXTRA_PATH:$PATH"; fi
           aily_path="$(command -v "$HARNESS_AILY_CLI")"
           aily_wrapper="$RUNNER_TEMP/aily-ci"
-          printf '#!/bin/bash\\nexec /usr/bin/env -u CI -u GITHUB_ACTIONS %q "$@"\\n' "$aily_path" > "$aily_wrapper"
+          printf '#!/bin/bash\nexec /usr/bin/env -u CI -u GITHUB_ACTIONS %q "$@"\n' "$aily_path" > "$aily_wrapper"
           chmod 700 "$aily_wrapper"
           export HARNESS_AILY_CLI="$aily_wrapper"
-          "$HARNESS_PYTHON" harness/orchestrator.py approve \\
-            --target "$GITHUB_WORKSPACE/AskDoc" \\
-            --workflow-id "$WORKFLOW_ID" \\
-            --codex "$HARNESS_CODEX_CLI" \\
+          "$HARNESS_PYTHON" harness/orchestrator.py approve \
+            --target "$GITHUB_WORKSPACE/AskDoc" \
+            --workflow-id "$WORKFLOW_ID" \
+            --codex "$HARNESS_CODEX_CLI" \
             --aily "$HARNESS_AILY_CLI"
 
       - name: Publish implementation status
         if: always() && steps.resolve.outputs.workflow_id != ''
-        working-directory: ${{ github.workspace }}/autonomous-engineering-harness
+        working-directory: \${{ github.workspace }}/autonomous-engineering-harness
         shell: bash
         env:
-          WORKFLOW_ID: ${{ steps.resolve.outputs.workflow_id }}
+          WORKFLOW_ID: \${{ steps.resolve.outputs.workflow_id }}
         run: |
           set -euo pipefail
           export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
@@ -133,5 +134,5 @@ jobs:
         run: |
           set -euo pipefail
           gh label create "agent:done" --color "0E8A16" --description "Harness workflow completed successfully" --force
-          gh api --method POST "repos/slcosentino1/AskDoc/issues/$ISSUE_NUMBER/labels" -f labels[]="agent:done" >/dev/null
+          gh api --method POST "repos/slcosentino1/AskDoc/issues/$ISSUE_NUMBER/labels" -f 'labels[]=agent:done' >/dev/null
           gh api --method DELETE "repos/slcosentino1/AskDoc/issues/$ISSUE_NUMBER/labels/agent:implement" >/dev/null

@@ -148,7 +148,7 @@ jobs:
         working-directory: ${{ github.workspace }}/autonomous-engineering-harness
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.ASKDOC_CHECKOUT_TOKEN }}
           HARNESS_GITHUB_ALLOWED_REPOSITORIES: slcosentino1/AskDoc
           WORKFLOW_ID: ${{ steps.resolve.outputs.workflow_id }}
         run: |
@@ -156,7 +156,6 @@ jobs:
           export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
           if [ -n "$HARNESS_EXTRA_PATH" ]; then export PATH="$HARNESS_EXTRA_PATH:$PATH"; fi
           gh auth status --hostname github.com
-          gh api --hostname github.com user --jq .login
           "$HARNESS_PYTHON" harness/orchestrator.py github report "$WORKFLOW_ID" --target "$GITHUB_WORKSPACE/AskDoc"
 
       - name: Mark issue complete

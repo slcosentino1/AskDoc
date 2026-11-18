@@ -297,8 +297,8 @@ jobs:
             echo "::error::GitHub did not provide a token to the import step."
             exit 1
           fi
-          if ! gh auth status --hostname github.com >/dev/null 2>&1; then
-            echo "::error::The GitHub token is unavailable to gh. Check the workflow's issues:read permission and repository access."
+          if ! gh api "repos/slcosentino1/AskDoc/issues/$ISSUE_NUMBER" --jq '.number' >/dev/null; then
+            echo "::error::The Actions token could not read this issue through GitHub's API."
             exit 1
           fi
 

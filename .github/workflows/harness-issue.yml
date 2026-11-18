@@ -29,7 +29,7 @@ jobs:
       HARNESS_CODEX_CLI: ${{ vars.HARNESS_CODEX_CLI || 'codex' }}
       HARNESS_AILY_CLI: ${{ vars.HARNESS_AILY_CLI || 'aily' }}
       HARNESS_EXTRA_PATH: ${{ vars.HARNESS_EXTRA_PATH || '' }}
-      HARNESS_GITHUB_BUDGET_USD: ${{ vars.HARNESS_GITHUB_BUDGET_USD || '0.50' }}
+      HARNESS_GITHUB_BUDGET_USD: ${{ vars.HARNESS_GITHUB_BUDGET_USD || '1.50' }}
       AILY_USER_ID: ${{ secrets.AILY_USER_ID }}
       AILY_ENTRA_TOKEN: ${{ secrets.AILY_ENTRA_TOKEN }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}

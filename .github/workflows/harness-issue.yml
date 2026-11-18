@@ -348,7 +348,7 @@ jobs:
           export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
           if [ -n "$HARNESS_EXTRA_PATH" ]; then export PATH="$HARNESS_EXTRA_PATH:$PATH"; fi
           "$HARNESS_PYTHON" harness/orchestrator.py github report "$WORKFLOW_ID" --target "$GITHUB_WORKSPACE/AskDoc"
-          gh label create "agent:review" --color "FBCA04" --description "Harness proposal is ready for human review" --force
+          gh label create "agent:review" --color "FBCA04" --description "Harness proposal is ready for human review" --force --repo slcosentino1/AskDoc
           gh api --method POST "repos/slcosentino1/AskDoc/issues/$ISSUE_NUMBER/labels" -f labels[]="agent:review" >/dev/null
           gh api --method DELETE "repos/slcosentino1/AskDoc/issues/$ISSUE_NUMBER/labels/agent:run" >/dev/null || true
 

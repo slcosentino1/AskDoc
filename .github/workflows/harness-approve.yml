@@ -62,7 +62,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
+          export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
           if [ -n "$HARNESS_EXTRA_PATH" ]; then export PATH="$HARNESS_EXTRA_PATH:$PATH"; fi
           command -v "$HARNESS_PYTHON" >/dev/null
           command -v "$HARNESS_CODEX_CLI" >/dev/null
@@ -129,13 +129,14 @@ jobs:
           WORKFLOW_ID: ${{ steps.resolve.outputs.workflow_id }}
         run: |
           set -euo pipefail
-          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
+          export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
           if [ -n "$HARNESS_EXTRA_PATH" ]; then export PATH="$HARNESS_EXTRA_PATH:$PATH"; fi
           aily_path="$(command -v "$HARNESS_AILY_CLI")"
           aily_wrapper="$RUNNER_TEMP/aily-ci"
           printf '#!/bin/bash\nexec /usr/bin/env -u CI -u GITHUB_ACTIONS %q "$@"\n' "$aily_path" > "$aily_wrapper"
           chmod 700 "$aily_wrapper"
           export HARNESS_AILY_CLI="$aily_wrapper"
+          "$HARNESS_AILY_CLI" claude --help >/dev/null
           "$HARNESS_PYTHON" harness/orchestrator.py approve \
             --target "$GITHUB_WORKSPACE/AskDoc" \
             --workflow-id "$WORKFLOW_ID" \
@@ -148,12 +149,12 @@ jobs:
         working-directory: ${{ github.workspace }}/autonomous-engineering-harness
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.ASKDOC_CHECKOUT_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           HARNESS_GITHUB_ALLOWED_REPOSITORIES: slcosentino1/AskDoc
           WORKFLOW_ID: ${{ steps.resolve.outputs.workflow_id }}
         run: |
           set -euo pipefail
-          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
+          export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
           if [ -n "$HARNESS_EXTRA_PATH" ]; then export PATH="$HARNESS_EXTRA_PATH:$PATH"; fi
           gh auth status --hostname github.com
           "$HARNESS_PYTHON" harness/orchestrator.py github report "$WORKFLOW_ID" --target "$GITHUB_WORKSPACE/AskDoc"

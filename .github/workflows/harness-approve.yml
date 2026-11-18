@@ -67,7 +67,13 @@ jobs:
           command -v "$HARNESS_PYTHON" >/dev/null
           command -v "$HARNESS_CODEX_CLI" >/dev/null
           command -v gh >/dev/null
-          gh auth status --hostname github.com >/dev/null
+          export GH_CONFIG_DIR="$RUNNER_TEMP/gh-config"
+          mkdir -p "$GH_CONFIG_DIR"
+          repo_name="$(gh api repos/slcosentino1/AskDoc --jq '.full_name')"
+          if [ "$repo_name" != "slcosentino1/AskDoc" ]; then
+            echo "GitHub token resolved an unexpected repository: $repo_name" >&2
+            exit 1
+          fi
           gh api --paginate --slurp "repos/slcosentino1/AskDoc/issues/$ISSUE_NUMBER/comments" > "$RUNNER_TEMP/issue-comments.json"
           "$HARNESS_PYTHON" - "$RUNNER_TEMP/issue-comments.json" "$GITHUB_OUTPUT" <<'PYTHON'
           import json
@@ -156,7 +162,13 @@ jobs:
           set -euo pipefail
           export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
           if [ -n "$HARNESS_EXTRA_PATH" ]; then export PATH="$HARNESS_EXTRA_PATH:$PATH"; fi
-          gh auth status --hostname github.com
+          export GH_CONFIG_DIR="$RUNNER_TEMP/gh-config"
+          mkdir -p "$GH_CONFIG_DIR"
+          repo_name="$(gh api repos/slcosentino1/AskDoc --jq '.full_name')"
+          if [ "$repo_name" != "slcosentino1/AskDoc" ]; then
+            echo "GitHub token resolved an unexpected repository: $repo_name" >&2
+            exit 1
+          fi
           "$HARNESS_PYTHON" harness/orchestrator.py github report "$WORKFLOW_ID" --target "$GITHUB_WORKSPACE/AskDoc"
 
       - name: Mark issue complete

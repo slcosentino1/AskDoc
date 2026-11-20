@@ -21,7 +21,7 @@ jobs:
     with:
       flow_label: ${{ github.event.label.name }}
       runner_label: askdoc-agent
-      llm_env_file: "~/Documents/Preparacion/software-agent-sdk/.env.aily"
+      llm_env_file: "~/.config/openhands/aily.env"
     secrets:
       OPENHANDS_LLM_API_KEY: ${{ secrets.OPENHANDS_LLM_API_KEY }}
       OPENHANDS_PUBLISH_TOKEN: ${{ secrets.OPENHANDS_PUBLISH_TOKEN }}
@@ -37,7 +37,7 @@ jobs:
       flow_label: agent:openhands-full-development
       phase: proposal
       runner_label: askdoc-agent
-      llm_env_file: "~/Documents/Preparacion/software-agent-sdk/.env.aily"
+      llm_env_file: "~/.config/openhands/aily.env"
     secrets:
       OPENHANDS_LLM_API_KEY: ${{ secrets.OPENHANDS_LLM_API_KEY }}
 
@@ -52,7 +52,7 @@ jobs:
       flow_label: agent:openhands-full-development
       phase: implementation
       runner_label: askdoc-agent
-      llm_env_file: "~/Documents/Preparacion/software-agent-sdk/.env.aily"
+      llm_env_file: "~/.config/openhands/aily.env"
     secrets:
       OPENHANDS_LLM_API_KEY: ${{ secrets.OPENHANDS_LLM_API_KEY }}
       OPENHANDS_PUBLISH_TOKEN: ${{ secrets.OPENHANDS_PUBLISH_TOKEN }}

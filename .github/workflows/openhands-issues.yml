@@ -1,0 +1,58 @@
+name: OpenHands Issue Workflows
+
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  run-shared-flow:
+    if: >-
+      github.event_name == 'issues' &&
+      contains(fromJSON('["agent:openhands-backfix","agent:openhands-quick-fix","agent:openhands-implementation-only"]'), github.event.label.name) &&
+      github.event.issue.pull_request == null
+    uses: slcosentino1/software-agent-sdk/.github/workflows/openhands-issue.yml@main
+    with:
+      flow_label: ${{ github.event.label.name }}
+      runner_label: askdoc-agent
+      llm_env_file: "~/Documents/Preparacion/software-agent-sdk/.env.aily"
+    secrets:
+      OPENHANDS_LLM_API_KEY: ${{ secrets.OPENHANDS_LLM_API_KEY }}
+      OPENHANDS_PUBLISH_TOKEN: ${{ secrets.OPENHANDS_PUBLISH_TOKEN }}
+
+  propose-full-development:
+    if: >-
+      github.event_name == 'issues' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'agent:openhands-full-development' &&
+      github.event.issue.pull_request == null
+    uses: slcosentino1/software-agent-sdk/.github/workflows/openhands-issue.yml@main
+    with:
+      flow_label: agent:openhands-full-development
+      phase: proposal
+      runner_label: askdoc-agent
+      llm_env_file: "~/Documents/Preparacion/software-agent-sdk/.env.aily"
+    secrets:
+      OPENHANDS_LLM_API_KEY: ${{ secrets.OPENHANDS_LLM_API_KEY }}
+
+  implement-approved-proposal:
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.user.login == github.repository_owner &&
+      startsWith(github.event.comment.body, '/openhands approve')
+    uses: slcosentino1/software-agent-sdk/.github/workflows/openhands-issue.yml@main
+    with:
+      flow_label: agent:openhands-full-development
+      phase: implementation
+      runner_label: askdoc-agent
+      llm_env_file: "~/Documents/Preparacion/software-agent-sdk/.env.aily"
+    secrets:
+      OPENHANDS_LLM_API_KEY: ${{ secrets.OPENHANDS_LLM_API_KEY }}
+      OPENHANDS_PUBLISH_TOKEN: ${{ secrets.OPENHANDS_PUBLISH_TOKEN }}

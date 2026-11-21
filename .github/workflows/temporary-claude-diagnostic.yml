@@ -20,6 +20,9 @@ jobs:
     steps:
       - name: Run proposal review through the runner's Aily/Entra session
         shell: bash
+        env:
+          AILY_USER_ID: ${{ secrets.AILY_USER_ID }}
+          AILY_ENTRA_TOKEN: ${{ secrets.AILY_ENTRA_TOKEN }}
         run: |
           python3.13 - <<'PY'
           import json, os, re, subprocess, sys, tempfile

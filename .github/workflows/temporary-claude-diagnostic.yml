@@ -51,7 +51,7 @@ jobs:
               ["/bin/bash", "-c", 'set -a; source "$HOME/.config/openhands/aily.env"; /usr/bin/env -0'],
               env=env, capture_output=True, check=True,
           )
-          for item in loaded.stdout.split(b"\\0"):
+          for item in loaded.stdout.split(b"\x00"):
               key, sep, value = item.partition(b"=")
               if sep: env[key.decode()] = value.decode()
           env.pop("CI", None)
